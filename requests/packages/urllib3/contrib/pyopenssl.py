@@ -186,6 +186,8 @@ class WrappedSocket(object):
                 return b''
             else:
                 raise
+        except OpenSSL.SSL.ZeroReturnError:
+            return b''
         except OpenSSL.SSL.WantReadError:
             rd, wd, ed = select.select(
                 [self.socket], [], [], self.socket.gettimeout())
