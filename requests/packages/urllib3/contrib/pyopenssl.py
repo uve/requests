@@ -98,6 +98,8 @@ DEFAULT_SSL_CIPHER_LIST = "ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:" + \
     "!aNULL:!MD5:!DSS"
 
 
+HANDSHAKE_TIMEOUT = 20
+
 orig_util_HAS_SNI = util.HAS_SNI
 orig_connection_ssl_wrap_socket = connection.ssl_wrap_socket
 
@@ -277,7 +279,9 @@ def ssl_wrap_socket(sock, keyfile=None, certfile=None, cert_reqs=None,
         try:
             cnx.do_handshake()
         except OpenSSL.SSL.WantReadError:
-            select.select([sock], [], [])
+            _rd, _, _ = select.select([sock], [], [], HANDSHAKE_TIMEOUT)
+            if _rd:
+                raise ssl.SSLError('Handshake timeout', e)
             continue
         except OpenSSL.SSL.Error as e:
             raise ssl.SSLError('bad handshake', e)
