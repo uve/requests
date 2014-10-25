@@ -3,6 +3,16 @@
 Release History
 ---------------
 
+2.4.3.1 (2014-10-24) Rebelmouse
++++++++++++++++++++++++++++++++
+
+- Added libs to requirements.txt for SSL SNI support
+
+**Bugfixes**
+
+- Handhshake ssl hangs forever - Gevent/Eventlet enviorments only
+- ZeroReturnerror exception is handled properly.
+
 2.4.3 (2014-10-06)
 ++++++++++++++++++
 
