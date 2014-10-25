@@ -281,7 +281,7 @@ def ssl_wrap_socket(sock, keyfile=None, certfile=None, cert_reqs=None,
         except OpenSSL.SSL.WantReadError:
             _rd, _, _ = select.select([sock], [], [], HANDSHAKE_TIMEOUT)
             if not _rd:
-                raise ssl.SSLError('Handshake timeout', e)
+                raise ssl.SSLError('Handshake timeout')
             continue
         except OpenSSL.SSL.Error as e:
             raise ssl.SSLError('bad handshake', e)
