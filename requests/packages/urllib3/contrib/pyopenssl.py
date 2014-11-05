@@ -62,6 +62,8 @@ import select
 from .. import connection
 from .. import util
 
+from requests import exceptions
+
 __all__ = ['inject_into_urllib3', 'extract_from_urllib3']
 
 # SNI only *really* works if we can read the subjectAltName of certificates.
@@ -186,6 +188,8 @@ class WrappedSocket(object):
         except OpenSSL.SSL.SysCallError as e:
             if self.suppress_ragged_eofs and e.args == (-1, 'Unexpected EOF'):
                 return b''
+            elif e.args == (104, 'Connection reset by peer'):
+                raise exceptions.SSLError('104 Connection reset by peer')
             else:
                 raise
         except OpenSSL.SSL.ZeroReturnError:

@@ -3,6 +3,12 @@
 Release History
 ---------------
 
+2.4.3.2 (2014-10-24) Rebelmouse
++++++++++++++++++++++++++++++++
+
+- Raise a requests' exception when occurs  104 - Connection reset by peer
+
+
 2.4.3.1 (2014-10-24) Rebelmouse
 +++++++++++++++++++++++++++++++
 
