@@ -3,7 +3,12 @@
 Release History
 ---------------
 
-2.4.3.2 (2014-10-24) Rebelmouse
+2.4.3.2 (2014-11-06) Rebelmouse
++++++++++++++++++++++++++++++++
+- SysCallError is handled as SSLError exception
+
+
+2.4.3.2 (2014-10-4) Rebelmouse
 +++++++++++++++++++++++++++++++
 
 - Raise a requests' exception when occurs  104 - Connection reset by peer
