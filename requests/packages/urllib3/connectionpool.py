@@ -6,8 +6,6 @@ import warnings
 from socket import error as SocketError, timeout as SocketTimeout
 import socket
 
-import OpenSSL.SSL
-
 try:  # Python 3
     from queue import LifoQueue, Empty, Full
 except ImportError:
@@ -538,7 +536,7 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
             # Timed out by queue.
             raise EmptyPoolError(self, "No pool connections are available.")
 
-        except (BaseSSLError, CertificateError, OpenSSL.SSL.SysCallError) as e:
+        except (BaseSSLError, CertificateError) as e:
             # Release connection unconditionally because there is no way to
             # close it externally in case of exception.
             release_conn = True

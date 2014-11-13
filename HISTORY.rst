@@ -3,7 +3,12 @@
 Release History
 ---------------
 
-2.4.3.2 (2014-11-06) Rebelmouse
+2.4.3.4 (2014-11-06) Rebelmouse
++++++++++++++++++++++++++++++++
+- small refactoring SysCallError treatment
+
+
+2.4.3.3 (2014-11-06) Rebelmouse
 +++++++++++++++++++++++++++++++
 - SysCallError is handled as SSLError exception
 

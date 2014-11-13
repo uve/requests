@@ -188,7 +188,7 @@ class WrappedSocket(object):
             if self.suppress_ragged_eofs and e.args == (-1, 'Unexpected EOF'):
                 return b''
             else:
-                raise
+                raise ssl.SSLError(e)
         except OpenSSL.SSL.ZeroReturnError:
             return b''
         except OpenSSL.SSL.WantReadError:
@@ -205,7 +205,10 @@ class WrappedSocket(object):
         return self.socket.settimeout(timeout)
 
     def sendall(self, data):
-        return self.connection.sendall(data)
+        try:
+            return self.connection.sendall(data)
+        except OpenSSL.SSL.SysCallError as e:
+            raise ssl.SSLError(e)
 
     def close(self):
         if self._makefile_refs < 1:
