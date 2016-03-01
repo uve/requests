@@ -20,11 +20,10 @@ from .packages.urllib3.fields import RequestField
 from .packages.urllib3.filepost import encode_multipart_formdata
 from .packages.urllib3.util import parse_url
 from .packages.urllib3.exceptions import (
-    DecodeError, ReadTimeoutError, ProtocolError)
+    DecodeError, ReadTimeoutError, ProtocolError, LocationParseError)
 from .exceptions import (
-    HTTPError, RequestException, MissingSchema, InvalidURL, 
-    ChunkedEncodingError, ContentDecodingError, ConnectionError, 
-    StreamConsumedError)
+    HTTPError, MissingSchema, InvalidURL, ChunkedEncodingError,
+    ContentDecodingError, ConnectionError, StreamConsumedError)
 from .utils import (
     guess_filename, get_auth_from_url, requote_uri,
     stream_decode_response_unicode, to_key_val_list, parse_header_links,
@@ -144,12 +143,13 @@ class RequestEncodingMixin(object):
             else:
                 fn = guess_filename(v) or k
                 fp = v
-            if isinstance(fp, str):
-                fp = StringIO(fp)
-            if isinstance(fp, bytes):
-                fp = BytesIO(fp)
 
-            rf = RequestField(name=k, data=fp.read(),
+            if isinstance(fp, (str, bytes, bytearray)):
+                fdata = fp
+            else:
+                fdata = fp.read()
+
+            rf = RequestField(name=k, data=fdata,
                               filename=fn, headers=fh)
             rf.make_multipart(content_type=ft)
             new_fields.append(rf)
@@ -351,7 +351,10 @@ class PreparedRequest(RequestEncodingMixin, RequestHooksMixin):
             return
 
         # Support for unicode domain names and paths.
-        scheme, auth, host, port, path, query, fragment = parse_url(url)
+        try:
+            scheme, auth, host, port, path, query, fragment = parse_url(url)
+        except LocationParseError as e:
+            raise InvalidURL(*e.args)
 
         if not scheme:
             raise MissingSchema("Invalid URL {0!r}: No schema supplied. "
@@ -472,7 +475,7 @@ class PreparedRequest(RequestEncodingMixin, RequestHooksMixin):
             l = super_len(body)
             if l:
                 self.headers['Content-Length'] = builtin_str(l)
-        elif self.method not in ('GET', 'HEAD'):
+        elif (self.method not in ('GET', 'HEAD')) and (self.headers.get('Content-Length') is None):
             self.headers['Content-Length'] = '0'
 
     def prepare_auth(self, auth, url=''):
@@ -615,7 +618,7 @@ class Response(object):
     def ok(self):
         try:
             self.raise_for_status()
-        except RequestException:
+        except HTTPError:
             return False
         return True
 
@@ -682,10 +685,12 @@ class Response(object):
 
         return chunks
 
-    def iter_lines(self, chunk_size=ITER_CHUNK_SIZE, decode_unicode=None):
+    def iter_lines(self, chunk_size=ITER_CHUNK_SIZE, decode_unicode=None, delimiter=None):
         """Iterates over the response data, one line at a time.  When
         stream=True is set on the request, this avoids reading the
         content at once into memory for large responses.
+
+        .. note:: This method is not reentrant safe.
         """
 
         pending = None
@@ -694,7 +699,11 @@ class Response(object):
 
             if pending is not None:
                 chunk = pending + chunk
-            lines = chunk.splitlines()
+
+            if delimiter:
+                lines = chunk.split(delimiter)
+            else:
+                lines = chunk.splitlines()
 
             if lines and lines[-1] and chunk and lines[-1][-1] == chunk[-1]:
                 pending = lines.pop()

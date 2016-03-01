@@ -157,3 +157,6 @@ Patches and Suggestions
 - Martin Jul (`@mjul <https://github.com/mjul>`_)
 - Joe Alcorn (`@buttscicles <https://github.com/buttscicles>`_)
 - Syed Suhail Ahmed <ssuhail.ahmed93@gmail.com> (`@syedsuhail <https://github.com/syedsuhail>`_)
+- Scott Sadler (`@ssadler <https://github.com/ssadler>`_)
+- Arthur Darcet (`@arthurdarcet <https://github.com/arthurdarcet>`_)
+- Ulrich Petri (`@ulope <https://github.com/ulope>`_)

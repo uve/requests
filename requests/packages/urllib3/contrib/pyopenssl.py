@@ -29,7 +29,7 @@ Now you can use :mod:`urllib3` as you normally would, and it will support SNI
 when the required modules are installed.
 
 Activating this module also has the positive side effect of disabling SSL/TLS
-encryption in Python 2 (see `CRIME attack`_).
+compression in Python 2 (see `CRIME attack`_).
 
 If you want to configure the default list of supported cipher suites, you can
 set the ``urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST`` variable.
@@ -71,9 +71,14 @@ HAS_SNI = SUBJ_ALT_NAME_SUPPORT
 # Map from urllib3 to PyOpenSSL compatible parameter-values.
 _openssl_versions = {
     ssl.PROTOCOL_SSLv23: OpenSSL.SSL.SSLv23_METHOD,
-    ssl.PROTOCOL_SSLv3: OpenSSL.SSL.SSLv3_METHOD,
     ssl.PROTOCOL_TLSv1: OpenSSL.SSL.TLSv1_METHOD,
 }
+
+try:
+    _openssl_versions.update({ssl.PROTOCOL_SSLv3: OpenSSL.SSL.SSLv3_METHOD})
+except AttributeError:
+    pass
+
 _openssl_verify = {
     ssl.CERT_NONE: OpenSSL.SSL.VERIFY_NONE,
     ssl.CERT_OPTIONAL: OpenSSL.SSL.VERIFY_PEER,
@@ -188,9 +193,12 @@ class WrappedSocket(object):
             if self.suppress_ragged_eofs and e.args == (-1, 'Unexpected EOF'):
                 return b''
             else:
-                raise ssl.SSLError(e)
-        except OpenSSL.SSL.ZeroReturnError:
-            return b''
+                raise
+        except OpenSSL.SSL.ZeroReturnError as e:
+            if self.connection.get_shutdown() == OpenSSL.SSL.RECEIVED_SHUTDOWN:
+                return b''
+            else:
+                raise
         except OpenSSL.SSL.WantReadError:
             rd, wd, ed = select.select(
                 [self.socket], [], [], self.socket.gettimeout())
@@ -204,11 +212,21 @@ class WrappedSocket(object):
     def settimeout(self, timeout):
         return self.socket.settimeout(timeout)
 
+    def _send_until_done(self, data):
+        while True:
+            try:
+                return self.connection.send(data)
+            except OpenSSL.SSL.WantWriteError:
+                _, wlist, _ = select.select([], [self.socket], [],
+                                            self.socket.gettimeout())
+                if not wlist:
+                    raise timeout()
+                continue
+
     def sendall(self, data):
-        try:
-            return self.connection.sendall(data)
-        except OpenSSL.SSL.SysCallError as e:
-            raise ssl.SSLError(e)
+        while len(data):
+            sent = self._send_until_done(data)
+            data = data[sent:]
 
     def close(self):
         if self._makefile_refs < 1:
@@ -256,6 +274,7 @@ def ssl_wrap_socket(sock, keyfile=None, certfile=None, cert_reqs=None,
                     ssl_version=None):
     ctx = OpenSSL.SSL.Context(_openssl_versions[ssl_version])
     if certfile:
+        keyfile = keyfile or certfile  # Match behaviour of the normal python ssl library
         ctx.use_certificate_file(certfile)
     if keyfile:
         ctx.use_privatekey_file(keyfile)
